@@ -33,7 +33,11 @@ const HomeScreen = () => {
   } | null>(null);
 
   useEffect(() => {
-    getCurrentLocation();
+    // Add delay to ensure map is ready
+    const timer = setTimeout(() => {
+      getCurrentLocation();
+    }, 500);
+    return () => clearTimeout(timer);
   }, []);
 
   const getCurrentLocation = async () => {
@@ -43,7 +47,7 @@ const HomeScreen = () => {
           PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
         );
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          Alert.alert('Permission Denied', 'Location permission is required');
+          console.log('Location permission denied');
           return;
         }
       }
@@ -61,7 +65,7 @@ const HomeScreen = () => {
         },
         error => {
           console.error('Location error:', error);
-          Alert.alert('Error', 'Failed to get current location');
+          // Don't show alert, just use default location
         },
         {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
       );
@@ -84,7 +88,9 @@ const HomeScreen = () => {
         style={styles.map}
         region={region}
         showsUserLocation
-        showsMyLocationButton={false}>
+        showsMyLocationButton={false}
+        onMapReady={() => console.log('Map ready')}
+        onError={(error) => console.error('Map error:', error)}>
         {currentLocation && (
           <Marker
             coordinate={currentLocation}

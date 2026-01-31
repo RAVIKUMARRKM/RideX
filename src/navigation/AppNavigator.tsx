@@ -15,6 +15,9 @@ import RideConfirmScreen from '../screens/main/RideConfirmScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
 import RideTrackingScreen from '../screens/main/RideTrackingScreen';
 import RideHistoryScreen from '../screens/main/RideHistoryScreen';
+import PaymentScreen from '../screens/main/PaymentScreen';
+import PromoScreen from '../screens/main/PromoScreen';
+import EmergencyScreen from '../screens/main/EmergencyScreen';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -34,6 +37,9 @@ export type RootStackParamList = {
     destination: {latitude: number; longitude: number; address: string};
   };
   RideHistory: undefined;
+  Payment: undefined;
+  Promo: undefined;
+  Emergency: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -66,6 +72,9 @@ const AppNavigator = () => {
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="RideTracking" component={RideTrackingScreen} />
           <Stack.Screen name="RideHistory" component={RideHistoryScreen} />
+          <Stack.Screen name="Payment" component={PaymentScreen} />
+          <Stack.Screen name="Promo" component={PromoScreen} />
+          <Stack.Screen name="Emergency" component={EmergencyScreen} />
         </>
       )}
     </Stack.Navigator>
