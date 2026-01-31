@@ -1,0 +1,40 @@
+{
+  "name": "RideX",
+  "displayName": "RideX",
+  "expo": {
+    "name": "RideX",
+    "slug": "ridex",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#667eea"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ridex.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "RideX needs your location to show nearby drivers and navigate to your destination.",
+        "NSLocationAlwaysUsageDescription": "RideX needs your location to provide ride services."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#667eea"
+      },
+      "package": "com.ridex.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "INTERNET"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
