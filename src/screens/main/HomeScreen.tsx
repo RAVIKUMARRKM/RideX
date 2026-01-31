@@ -1,12 +1,16 @@
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   StatusBar,
+  PermissionsAndroid,
+  Platform,
   Alert,
 } from 'react-native';
+import MapView, {Marker, PROVIDER_GOOGLE} from 'react-native-maps';
+import Geolocation from 'react-native-geolocation-service';
 import {useNavigation} from '@react-navigation/native';
 import {StackNavigationProp} from '@react-navigation/stack';
 import {RootStackParamList} from '../../navigation/AppNavigator';
@@ -16,74 +20,135 @@ type HomeScreenProp = StackNavigationProp<RootStackParamList, 'Home'>;
 
 const HomeScreen = () => {
   const navigation = useNavigation<HomeScreenProp>();
-  const {user, logout} = useAuthStore();
+  const {user} = useAuthStore();
+  const [region, setRegion] = useState({
+    latitude: 37.78825,
+    longitude: -122.4324,
+    latitudeDelta: 0.01,
+    longitudeDelta: 0.01,
+  });
+  const [currentLocation, setCurrentLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
 
-  const handleLogout = async () => {
-    await logout();
+  useEffect(() => {
+    getCurrentLocation();
+  }, []);
+
+  const getCurrentLocation = async () => {
+    try {
+      if (Platform.OS === 'android') {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        );
+        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+          Alert.alert('Permission Denied', 'Location permission is required');
+          return;
+        }
+      }
+
+      Geolocation.getCurrentPosition(
+        position => {
+          const {latitude, longitude} = position.coords;
+          setCurrentLocation({latitude, longitude});
+          setRegion({
+            latitude,
+            longitude,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          });
+        },
+        error => {
+          console.error('Location error:', error);
+          Alert.alert('Error', 'Failed to get current location');
+        },
+        {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
+      );
+    } catch (error) {
+      console.error('Location permission error:', error);
+    }
+  };
+
+  const handleDestinationSearch = () => {
+    navigation.navigate('Destination');
   };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* Header */}
-      <View style={styles.header}>
+      {/* Map */}
+      <MapView
+        provider={PROVIDER_GOOGLE}
+        style={styles.map}
+        region={region}
+        showsUserLocation
+        showsMyLocationButton={false}>
+        {currentLocation && (
+          <Marker
+            coordinate={currentLocation}
+            title="Your Location"
+            description={user?.fullName}
+            pinColor="#667eea"
+          />
+        )}
+      </MapView>
+
+      {/* Menu Button */}
+      <TouchableOpacity
+        style={styles.menuButton}
+        onPress={() => navigation.navigate('Profile')}>
+        <Text style={styles.menuIcon}>☰</Text>
+      </TouchableOpacity>
+
+      {/* Current Location Button */}
+      <TouchableOpacity
+        style={styles.locationButton}
+        onPress={getCurrentLocation}>
+        <Text style={styles.locationIcon}>⊙</Text>
+      </TouchableOpacity>
+
+      {/* Bottom Sheet */}
+      <View style={styles.bottomSheet}>
+        <View style={styles.handle} />
+
+        <Text style={styles.greeting}>Hello, {user?.fullName}! 👋</Text>
+
         <TouchableOpacity
-          style={styles.menuButton}
-          onPress={() => navigation.navigate('Profile')}>
-          <Text style={styles.menuIcon}>☰</Text>
+          style={styles.searchBox}
+          onPress={handleDestinationSearch}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <Text style={styles.searchPlaceholder}>Where to?</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>RideX</Text>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
 
-      {/* Welcome Section */}
-      <View style={styles.welcomeSection}>
-        <Text style={styles.welcomeEmoji}>🎉</Text>
-        <Text style={styles.welcomeTitle}>Welcome, {user?.fullName}!</Text>
-        <Text style={styles.welcomeSubtitle}>
-          Login successful! Your ride-hailing app is ready.
-        </Text>
-      </View>
+        <View style={styles.recentPlaces}>
+          <Text style={styles.recentTitle}>Recent Places</Text>
 
-      {/* Feature Cards */}
-      <View style={styles.content}>
-        <View style={styles.card}>
-          <Text style={styles.cardEmoji}>🗺️</Text>
-          <Text style={styles.cardTitle}>Map View</Text>
-          <Text style={styles.cardDescription}>
-            Google Maps integration ready. Add your API key to enable map features.
-          </Text>
+          <TouchableOpacity style={styles.placeItem}>
+            <View style={styles.placeIcon}>
+              <Text>🏠</Text>
+            </View>
+            <View style={styles.placeInfo}>
+              <Text style={styles.placeName}>Home</Text>
+              <Text style={styles.placeAddress}>
+                123 Main Street, Downtown
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.placeItem}>
+            <View style={styles.placeIcon}>
+              <Text>💼</Text>
+            </View>
+            <View style={styles.placeInfo}>
+              <Text style={styles.placeName}>Work</Text>
+              <Text style={styles.placeAddress}>
+                456 Business Ave, Suite 100
+              </Text>
+            </View>
+          </TouchableOpacity>
         </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardEmoji}>🔐</Text>
-          <Text style={styles.cardTitle}>Authentication</Text>
-          <Text style={styles.cardDescription}>
-            OTP-based login working perfectly!
-          </Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardEmoji}>📱</Text>
-          <Text style={styles.cardTitle}>Your Info</Text>
-          <Text style={styles.cardDescription}>
-            Phone: {user?.phoneNumber}
-            {'\n'}Email: {user?.email || 'Not set'}
-            {'\n'}Role: {user?.role}
-          </Text>
-        </View>
-      </View>
-
-      {/* Bottom Actions */}
-      <View style={styles.bottomActions}>
-        <TouchableOpacity
-          style={styles.primaryButton}
-          onPress={() => Alert.alert('Coming Soon', 'Add Google Maps API key to enable this feature')}>
-          <Text style={styles.primaryButtonText}>🚗  Request a Ride</Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -92,111 +157,130 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 20,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#667eea',
+  map: {
+    flex: 1,
   },
   menuButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f5f5f5',
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    width: 50,
+    height: 50,
+    backgroundColor: '#fff',
+    borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  menuIcon: {
-    fontSize: 20,
-  },
-  logoutButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#f5f5f5',
-  },
-  logoutText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#667eea',
-  },
-  welcomeSection: {
-    padding: 30,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  welcomeEmoji: {
-    fontSize: 60,
-    marginBottom: 15,
-  },
-  welcomeTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 8,
-  },
-  welcomeSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.15,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 5,
   },
-  cardEmoji: {
-    fontSize: 40,
-    marginBottom: 12,
+  menuIcon: {
+    fontSize: 24,
   },
-  cardTitle: {
-    fontSize: 18,
+  locationButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    width: 50,
+    height: 50,
+    backgroundColor: '#fff',
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  locationIcon: {
+    fontSize: 24,
+  },
+  bottomSheet: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: -4},
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#ddd',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 15,
+  },
+  greeting: {
+    fontSize: 20,
     fontWeight: '700',
     color: '#333',
-    marginBottom: 8,
+    marginBottom: 15,
   },
-  cardDescription: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-  },
-  bottomActions: {
-    padding: 20,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  primaryButton: {
-    backgroundColor: '#667eea',
-    paddingVertical: 16,
-    borderRadius: 12,
+  searchBox: {
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
   },
-  primaryButtonText: {
-    color: '#fff',
+  searchIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  searchPlaceholder: {
+    fontSize: 15,
+    color: '#999',
+  },
+  recentPlaces: {
+    marginTop: 10,
+  },
+  recentTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 15,
+  },
+  placeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  placeIcon: {
+    width: 40,
+    height: 40,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  placeInfo: {
+    flex: 1,
+  },
+  placeName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 3,
+  },
+  placeAddress: {
+    fontSize: 13,
+    color: '#999',
   },
 });
 
