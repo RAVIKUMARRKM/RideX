@@ -268,8 +268,38 @@ exports.getNearbyDrivers = async (req, res) => {
       return res.status(400).json({message: 'Coordinates are required'});
     }
 
+    // Demo mode - return mock drivers
+    if (process.env.DEMO_MODE === 'true') {
+      const mockDrivers = [
+        {
+          id: 1,
+          name: 'John Smith',
+          rating: 4.8,
+          distance: '0.5',
+          vehicle: {type: 'car', model: 'Toyota Camry', color: 'Black'},
+          location: {latitude: parseFloat(latitude) + 0.002, longitude: parseFloat(longitude) + 0.002},
+        },
+        {
+          id: 2,
+          name: 'Sarah Johnson',
+          rating: 4.9,
+          distance: '1.2',
+          vehicle: {type: 'suv', model: 'Honda CR-V', color: 'White'},
+          location: {latitude: parseFloat(latitude) - 0.003, longitude: parseFloat(longitude) + 0.001},
+        },
+        {
+          id: 3,
+          name: 'Mike Davis',
+          rating: 4.7,
+          distance: '2.0',
+          vehicle: {type: 'car', model: 'Hyundai Elantra', color: 'Silver'},
+          location: {latitude: parseFloat(latitude) + 0.004, longitude: parseFloat(longitude) - 0.002},
+        },
+      ];
+      return res.json({drivers: mockDrivers});
+    }
+
     // Simple query to get online drivers
-    // In production, use PostGIS for better geospatial queries
     const result = await pool.query(
       `SELECT d.*, u.full_name, u.rating_average
        FROM drivers d
@@ -311,5 +341,115 @@ exports.getNearbyDrivers = async (req, res) => {
   } catch (error) {
     console.error('Get nearby drivers error:', error);
     res.status(500).json({message: 'Failed to get nearby drivers'});
+  }
+};
+
+// Get ride history
+exports.getRideHistory = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const {limit = 20, offset = 0} = req.query;
+
+    // Demo mode - return mock ride history
+    if (process.env.DEMO_MODE === 'true') {
+      const mockRides = [
+        {
+          id: 1,
+          pickup_address: '123 Main St, Downtown',
+          destination_address: '456 Oak Ave, Uptown',
+          fare: '15.50',
+          status: 'completed',
+          completed_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+          driver_name: 'John Smith',
+          driver_rating: 4.8,
+          vehicle_model: 'Toyota Camry',
+        },
+        {
+          id: 2,
+          pickup_address: '789 Elm St, Suburb',
+          destination_address: '321 Pine Rd, City Center',
+          fare: '22.75',
+          status: 'completed',
+          completed_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+          driver_name: 'Sarah Johnson',
+          driver_rating: 4.9,
+          vehicle_model: 'Honda CR-V',
+        },
+        {
+          id: 3,
+          pickup_address: '555 Maple Dr, North Side',
+          destination_address: '777 Birch Ln, South Side',
+          fare: '18.25',
+          status: 'completed',
+          completed_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+          driver_name: 'Mike Davis',
+          driver_rating: 4.7,
+          vehicle_model: 'Hyundai Elantra',
+        },
+      ];
+      return res.json({rides: mockRides, total: mockRides.length});
+    }
+
+    const result = await pool.query(
+      `SELECT r.*,
+              u_driver.full_name as driver_name,
+              u_driver.rating_average as driver_rating,
+              d.vehicle_model
+       FROM rides r
+       LEFT JOIN drivers d ON r.driver_id = d.id
+       LEFT JOIN users u_driver ON d.user_id = u_driver.id
+       WHERE r.rider_id = $1
+       ORDER BY r.created_at DESC
+       LIMIT $2 OFFSET $3`,
+      [userId, limit, offset],
+    );
+
+    res.json({rides: result.rows, total: result.rows.length});
+  } catch (error) {
+    console.error('Get ride history error:', error);
+    res.status(500).json({message: 'Failed to get ride history'});
+  }
+};
+
+// Rate driver
+exports.rateDriver = async (req, res) => {
+  try {
+    const {id} = req.params;
+    const userId = req.userId;
+    const {rating, feedback} = req.body;
+
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({message: 'Rating must be between 1 and 5'});
+    }
+
+    // Demo mode
+    if (process.env.DEMO_MODE === 'true') {
+      return res.json({
+        message: 'Rating submitted successfully',
+        rating: {rideId: id, rating, feedback},
+      });
+    }
+
+    const result = await pool.query(
+      `UPDATE rides
+       SET driver_rating = $1,
+           driver_feedback = $2,
+           rated_at = NOW()
+       WHERE id = $3 AND rider_id = $4 AND status = 'completed'
+       RETURNING *`,
+      [rating, feedback, id, userId],
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({message: 'Cannot rate this ride'});
+    }
+
+    res.json({
+      message: 'Rating submitted successfully',
+      rating: {rideId: id, rating, feedback},
+    });
+  } catch (error) {
+    console.error('Rate driver error:', error);
+    res.status(500).json({message: 'Failed to submit rating'});
   }
 };

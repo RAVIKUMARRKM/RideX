@@ -18,4 +18,10 @@ router.put('/:id/cancel', authMiddleware, rideController.cancelRide);
 // Get nearby drivers
 router.get('/drivers/nearby', authMiddleware, rideController.getNearbyDrivers);
 
+// Get ride history
+router.get('/history/all', authMiddleware, rideController.getRideHistory);
+
+// Rate driver
+router.post('/:id/rate', authMiddleware, rideController.rateDriver);
+
 module.exports = router;

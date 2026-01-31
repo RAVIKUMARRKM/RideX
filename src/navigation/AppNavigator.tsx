@@ -13,6 +13,8 @@ import HomeScreen from '../screens/main/HomeScreen';
 import DestinationScreen from '../screens/main/DestinationScreen';
 import RideConfirmScreen from '../screens/main/RideConfirmScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
+import RideTrackingScreen from '../screens/main/RideTrackingScreen';
+import RideHistoryScreen from '../screens/main/RideHistoryScreen';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -26,6 +28,12 @@ export type RootStackParamList = {
     destination: {latitude: number; longitude: number; address: string};
   };
   Profile: undefined;
+  RideTracking: {
+    rideId: number;
+    pickup: {latitude: number; longitude: number; address: string};
+    destination: {latitude: number; longitude: number; address: string};
+  };
+  RideHistory: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -56,6 +64,8 @@ const AppNavigator = () => {
           <Stack.Screen name="Destination" component={DestinationScreen} />
           <Stack.Screen name="RideConfirm" component={RideConfirmScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen name="RideTracking" component={RideTrackingScreen} />
+          <Stack.Screen name="RideHistory" component={RideHistoryScreen} />
         </>
       )}
     </Stack.Navigator>
